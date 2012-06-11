@@ -22,3 +22,4 @@ bin/taglib-config
 .gitignore
 *.sqlite
 avuserow-taglib-*
+*.pyc
