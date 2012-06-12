@@ -25,7 +25,7 @@ class ModeStatus(Mode):
 		output["players"] = self.owner.getPlayers()
 		output["player"] = self.session.player()
 		output["now_playing"] = self.session.currentSong()
-		output["playlist"] = []
+		output["playlist"] = self.owner.getQueue(self.session._player)
 		output["who"] = self.session.user()
 		output["can_skip"] = True
 		output["is_admin"] = True
@@ -92,6 +92,32 @@ class ModeHistory(Mode):
 				history.append(song)
 		return (200, results)
 
+class ModeDetails(Mode):
+	def get(self, args):
+		if "song_id" not in args:
+			return (400, {"api_error": "get_details requires a 'song_id'"})
+		obj = self.owner.db.SELECT("songs", {"song_id": args["song_id"]})[0]
+		obj["now"] = int(time.time())
+		voters = self.owner.db.SELECT("votes", {"song_id" : obj["song_id"], "player_id": self.session._player})
+		obj["who"] = []
+		for i in voters:
+			obj["who"].append(i['who'])
+		return (200, {"song": obj})
+
+class ModeArt(Mode):
+	def get(self, args):
+		if "song_id" not in args:
+			return (400, {"api_error": "art requires a 'song_id'"})
+		obj = self.owner.db.SELECT("songs", {"song_id": args["song_id"]})[0]
+		print(obj["path"])
+		possible = ["acoustics-art.png", "acoustics-art.jpg", "cover.png", "cover.jpg", "Folder.png", "Folder.jpg"]
+		for i in possible:
+			fpath = os.path.join(os.path.dirname(obj["path"]),i)
+			if os.path.exists(fpath):
+				print("Found: %s" % fpath)
+		return (200, b"lolbuts", "text/html")
+
+
 class ModeChangePlayer(Mode):
 	def get(self, args):
 		if "player_id" not in args:
@@ -121,7 +147,10 @@ class AcousticsSession(object):
 			return None
 		obj = self.owner.db.SELECT("songs", {"song_id": self.player()["song_id"]})[0]
 		obj["now"] = int(time.time())
+		voters = self.owner.db.SELECT("votes", {"song_id" : obj["song_id"], "player_id": self._player})
 		obj["who"] = []
+		for i in voters:
+			obj["who"].append(i['who'])
 		return obj
 
 class AcousticsServer(object):
@@ -129,6 +158,22 @@ class AcousticsServer(object):
 		self.modes = {}
 		self.db = db.Sqlite('/home/klange/Music/amp.sqlite')
 		self.sessions = {}
+	def getQueue(self, player):
+		raw = self.db.SongsByVotes(player)
+		outlist = []
+		output  = {}
+		x = self.db.SELECT("players", {"player_id": player})
+		for i in raw:
+			if x and x[0]['song_id'] == i['song_id']: continue
+			if i["song_id"] in output:
+				output[i["song_id"]]["priority"][i["who"]] = i["priority"]
+				output[i["song_id"]]["who"].append(i["who"])
+			else:
+				i["priority"] = {i["who"]: i["priority"]}
+				i["who"] = [i["who"]]
+				output[i["song_id"]] = i
+				outlist.append(i)
+		return outlist
 	def addMode(self, name, mode_type):
 		self.modes[name] = mode_type
 	def getPlayers(self):
@@ -152,6 +197,8 @@ server.addMode("random", ModeRandom)
 server.addMode("history", ModeHistory)
 server.addMode("recent", ModeRecent)
 server.addMode("change_player", ModeChangePlayer)
+server.addMode("get_details", ModeDetails)
+server.addMode("art", ModeArt)
 
 class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 	def do_GET(self):
@@ -176,6 +223,7 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 			if 'Authorization' in self.headers:
 				if self.headers["Authorization"].startswith('Basic '):
 					tmp = base64.standard_b64decode(bytes(self.headers['Authorization'].split(" ")[1].encode('utf-8'))).decode("utf-8")
+					# TODO: Actual authentication
 					server.sessions[session]._user = tmp.split(":")[0]
 					self.send_response(200)
 					self.send_header('Location', '/json.pl?mode=status')
@@ -192,12 +240,18 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 				args[k] = ";".join(args[k])
 			if "mode" not in args:
 				args["mode"] = "status"
-			(status, results) = server.execute(session, args)
+			result = server.execute(session, args)
+			if len(result) == 2:
+				(status, results) = result
+				output = json.dumps(results).encode("utf-8")
+				ctype = 'application/json'
+			elif len(result) == 3:
+				(status, output, ctype) = result
 			# Respond appropriately
 			self.send_response(status)
-			self.send_header('Content-type', 'application/json')
+			self.send_header('Content-type', ctype)
 			self.end_headers()
-			self.wfile.write(json.dumps(results).encode("utf-8"))
+			self.wfile.write(output)
 		else:
 			return http.server.SimpleHTTPRequestHandler.do_GET(self)
 

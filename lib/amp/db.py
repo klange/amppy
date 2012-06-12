@@ -59,7 +59,7 @@ class DatabaseManager(object):
 			c.execute("SELECT time FROM history WHERE voter = ? GROUP BY time ORDER BY time DESC LIMIT ?", a)
 			results = c.fetchall()
 			a = (results[-1]["time"], player, voter, limit)
-			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs on HISTORY.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? AND WHERE voter = ? ORDER BY history.time DESC LIMIT ?", a)
+			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON history.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? AND WHERE voter = ? ORDER BY history.time DESC LIMIT ?", a)
 			results = c.fetchall()
 			return self.toDicts(results)
 		else:
@@ -67,11 +67,17 @@ class DatabaseManager(object):
 			c.execute("SELECT time FROM history GROUP BY time ORDER BY time DESC LIMIT ?", a)
 			results = c.fetchall()
 			a = (results[-1]["time"], player, limit)
-			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON HISTORY.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? ORDER BY history.time DESC LIMIT ?", a)
+			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON history.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? ORDER BY history.time DESC LIMIT ?", a)
 			results = c.fetchall()
 			return self.toDicts(results)
 	def Recent(self, limit=20):
 		return self.SELECT("songs", {"online": 1}, order=["song_id"], direction="DESC", limit=limit)
+	def SongsByVotes(self, player=None):
+		c = self.conn.cursor()
+		a = (player,)
+		c.execute("SELECT votes.who, votes.priority, votes.time, songs.* FROM votes INNER JOIN songs ON votes.song_id = songs.song_id WHERE votes.player_id = ? ORDER BY votes.priority", a)
+		results = c.fetchall()
+		return self.toDicts(results)
 
 class Sqlite(DatabaseManager):
 	def __init__(self, location="conf/acoustics.sqlite"):
