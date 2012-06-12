@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import http.server, http.cookies
-import socketserver
+import socketserver, base64
 import os, json, sys, time, uuid
 from urllib.parse import urlparse, parse_qs
 
@@ -172,10 +172,18 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 			self.end_headers()
 			return
 		if self.path.startswith("/www-data/auth"):
-			server.sessions[session]._user = session[0:2] + "..." + session[-3:-1]
-			self.send_response(307)
-			self.send_header('Location', '/json.?mode=status')
+			# Replace this with your own authorization as necessary.
+			if 'Authorization' in self.headers:
+				if self.headers["Authorization"].startswith('Basic '):
+					tmp = base64.standard_b64decode(bytes(self.headers['Authorization'].split(" ")[1].encode('utf-8'))).decode("utf-8")
+					server.sessions[session]._user = tmp.split(":")[0]
+					self.send_response(200)
+					self.send_header('Location', '/json.pl?mode=status')
+					self.end_headers()
+			self.send_response(401)
+			self.send_header('WWW-Authenticate', 'Basic realm="Acoustics"')
 			self.end_headers()
+			return
 		elif self.path.startswith("/json."):
 			# Parse API call
 			path = urlparse(self.path)
