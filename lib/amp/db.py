@@ -73,7 +73,6 @@ class DatabaseManager(object):
 	def Recent(self, limit=20):
 		return self.SELECT("songs", {"online": 1}, order=["song_id"], direction="DESC", limit=limit)
 
-
 class Sqlite(DatabaseManager):
 	def __init__(self, location="conf/acoustics.sqlite"):
 		self.conn = sqlite3.connect(location)
