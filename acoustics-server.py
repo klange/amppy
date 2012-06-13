@@ -115,7 +115,6 @@ class ModeArt(Mode):
 		if size > 1000:
 			size = 1000
 		obj = self.owner.db.SELECT("songs", {"song_id": args["song_id"]})[0]
-		print(obj["path"])
 		possible = ["acoustics-art.png", "acoustics-art.jpg", "cover.png", "cover.jpg", "Folder.png", "Folder.jpg"]
 		path = "www-data/icons/cd_case.png"
 		for i in possible:
@@ -127,7 +126,6 @@ class ModeArt(Mode):
 		subprocess.call(["convert", path, "-resize", "%dx%d" % (size,size), f.name])
 		filecontents = f.read()
 		f.close()
-
 		return (200, filecontents, "image/png")
 
 class ModeSelect(Mode):
@@ -176,6 +174,54 @@ class ModeVote(Mode):
 		else:
 			self.owner.db.AddVote(self.session.user(), self.session._player, args['song_id'], priorityNumber)
 		return ModeStatus.get(self, args)
+
+class ModeUnvote(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to vote for songs."})
+		if "song_id" not in args:
+			return (400, {"api_error": "vote requires a 'song_id' argument."})
+		if ";" in args["song_id"]:
+			for i in args["song_id"].split(";"):
+				self.owner.db.Unvote(self.session.user(), self.session._player, i)
+		else:
+			self.owner.db.Unvote(self.session.user(), self.session._player, args['song_id'])
+		return ModeStatus.get(self, args)
+
+class ModePlaylists(Mode):
+	def get(self, args):
+		who = ""
+		title = ""
+		if "who" in args: who = args["who"]
+		if "title" in args: title = args["title"]
+		return (200, self.owner.db.Playlists(who,title))
+
+class ModePlaylistsLoose(Mode):
+	def get(self, args):
+		value = ""
+		if "value" in args: value = args["value"]
+		return (200, self.owner.db.PlaylistsLoose(value))
+
+class ModePlaylistContents(Mode):
+	def get(self, args):
+		if not "playlist_id" in args:
+			return (400, {"api_error": "playlist_contents requires a 'playlist_id' argument."})
+		return (200, self.owner.db.PlaylistContents(args["playlist_id"]))
+
+class ModePlaylistInfo(Mode):
+	def get(self, args):
+		if not "playlist_id" in args:
+			return (400, {"api_error": "playlist_info requires a 'playlist_id' argument."})
+		return (200, self.owner.db.PlaylistInfo(args["playlist_id"]))
+
+class ModeStats(Mode):
+	def get(self, args):
+		who = None
+		if "who" in args: who = args["who"]
+		output = {}
+		output["total_songs"] = self.owner.db.SongCount()
+		output["top_artists"] = self.owner.db.TopArtists(who)
+		return (200, output)
 
 class AcousticsSession(object):
 	def __init__(self, sessid, owner):
@@ -255,10 +301,18 @@ server.addMode("top_voted", ModeTopVoted)
 server.addMode("album_search", ModeAlbumSearch)
 server.addMode("select", ModeSelect)
 server.addMode("vote", ModeVote)
+server.addMode("unvote", ModeUnvote)
+server.addMode("stats", ModeStats)
+server.addMode("playlists", ModePlaylists)
+server.addMode("playlists_loose", ModePlaylistsLoose)
+server.addMode("playlist_contents", ModePlaylistContents)
+server.addMode("playlist_info", ModePlaylistInfo)
+
+failures = {}
 
 class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 	def do_GET(self):
-		global server
+		global server, failures
 		if 'cookie' in self.headers:
 			self.cookie = http.cookies.SimpleCookie(self.headers["cookie"])
 		else:
@@ -267,13 +321,25 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 		if "sessid" in self.cookie and self.cookie['sessid'].value in server.sessions:
 			session = self.cookie["sessid"].value
 		else:
+			if self.client_address[0] not in failures.keys():
+				print("First time, trying to give out session key for " + self.client_address[0])
+				failures[self.client_address[0]] = 0
+			failures[self.client_address[0]] += 1
 			session = server.newSession()
 			self.cookie["sessid"] = session
-			self.send_response(307)
-			self.send_header('Location', self.path)
-			self.send_header('Cookie', self.cookie)
-			self.end_headers()
-			return
+			if failures[self.client_address[0]] > 3:
+				self.send_response(400)
+				self.send_header('Content-type', 'text/html')
+				self.send_header('Set-Cookie', self.cookie)
+				self.end_headers()
+				self.wfile.write(b"Your browser is not accepting a required session cookie, please try refreshing.")
+				return
+			else:
+				self.send_response(307)
+				self.send_header('Location', self.path)
+				self.send_header('Set-Cookie', self.cookie)
+				self.end_headers()
+				return
 		if self.path.startswith("/www-data/auth"):
 			# Replace this with your own authorization as necessary.
 			if 'Authorization' in self.headers:

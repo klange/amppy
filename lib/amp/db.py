@@ -32,7 +32,6 @@ class DatabaseManager(object):
 		if offset:
 			query_string += " OFFSET ?"
 			a.append(offset)
-		print(query_string)
 		c.execute(query_string, a)
 		results = c.fetchall()
 		return self.toDicts(results)
@@ -122,6 +121,42 @@ class DatabaseManager(object):
 		c = self.conn.cursor()
 		c.execute("INSERT IGNORE INTO votes (song_id, time, player_id, who, priority) VALUES (?, now(), ?, ?, ?)", [song, player, user, priority])
 		self.conn.commit()
+	def Unvote(self, user, song):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM votes WHERE song_id = ? AND who = ?", [song, user])
+		self.conn.commit()
+	def SongCount(self):
+		c = self.conn.cursor()
+		c.execute("SELECT count(*) FROM SONGS",[])
+		v = c.fetchall()
+		if len(v):
+			return self.toDicts(v)[0]["count(*)"]
+		else:
+			return 0
+	def TopArtists(self, who=None, limit=10):
+		c = self.conn.cursor()
+		if who:
+			c.execute("SELECT artist, count(songs.artist) AS count FROM songs, history WHERE songs.song_id = history.song_id AND history.who = ? GROUP BY artist ORDER BY count(songs.artist) DESC LIMIT ?", [who, limit])
+		else:
+			c.execute("SELECT artist, count(songs.artist) AS count FROM songs, history WHERE songs.song_id = history.song_id GROUP BY artist ORDER BY count(songs.artist) DESC LIMIT ?", [limit])
+		return self.toDicts(c.fetchall())
+	def Playlists(self, who="", title=""):
+		s = "%%%s%%" % title
+		return self.SELECT("playlists", {"who": who, "title": s}, comparator="LIKE")
+	def PlaylistsLoose(self, value):
+		s = "%%%s%%" % value
+		return self.SELECT("playlists", {"who": s, "title": s}, where="OR", comparator="LIKE")
+	def PlaylistContents(self, playlist_id):
+		c = self.conn.cursor()
+		c.execute("SELECT songs.* FROM playlist_contents INNER JOIN songs ON playlist_contents.song_id = songs.song_id WHERE online = 1 AND playlist_id = ? ORDER BY priority", [playlist_id])
+		return self.toDicts(c.fetchall())
+	def PlaylistInfo(self, playlist_id):
+		x = self.SELECT("playlists", {"playlist_id": playlist_id})
+		if len(x):
+			return x[0]
+		else:
+			return {}
+
 
 class Sqlite(DatabaseManager):
 	def __init__(self, location="conf/acoustics.sqlite"):
