@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import http.server, http.cookies
-import socketserver, base64
-import os, json, sys, time, uuid
+import socketserver, base64, subprocess
+import os, json, sys, time, uuid, tempfile
 from urllib.parse import urlparse, parse_qs
 
 sys.path.append('lib')
@@ -108,14 +108,35 @@ class ModeArt(Mode):
 	def get(self, args):
 		if "song_id" not in args:
 			return (400, {"api_error": "art requires a 'song_id'"})
+		if "size" not in args:
+			size = 500
+		else:
+			size = int(args["size"])
+		if size > 1000:
+			size = 1000
 		obj = self.owner.db.SELECT("songs", {"song_id": args["song_id"]})[0]
 		print(obj["path"])
 		possible = ["acoustics-art.png", "acoustics-art.jpg", "cover.png", "cover.jpg", "Folder.png", "Folder.jpg"]
+		path = "www-data/icons/cd_case.png"
 		for i in possible:
 			fpath = os.path.join(os.path.dirname(obj["path"]),i)
 			if os.path.exists(fpath):
-				print("Found: %s" % fpath)
-		return (200, b"lolbuts", "text/html")
+				path = fpath
+				break
+		f = tempfile.NamedTemporaryFile()
+		subprocess.call(["convert", path, "-resize", "%dx%d" % (size,size), f.name])
+		filecontents = f.read()
+		f.close()
+
+		return (200, filecontents, "image/png")
+
+class ModeSelect(Mode):
+	def get(self, args):
+		if "field" not in args:
+			return (400, {"api_error": "select requires a 'field' argument."})
+		if "value" not in args:
+			return (400, {"api_error": "select requires a 'value' argument."})
+		return (200, self.owner.db.Select(args["field"], args["value"]))
 
 
 class ModeChangePlayer(Mode):
@@ -125,6 +146,35 @@ class ModeChangePlayer(Mode):
 		if args["player_id"] not in self.owner.getPlayers():
 			return (400, {"api_error", "Bad player id."})
 		self.session._player = args["player_id"]
+		return ModeStatus.get(self, args)
+
+class ModeTopVoted(Mode):
+	def get(self, args):
+		if "limit" in args:
+			limit = args["limit"]
+		else:
+			limit = 10
+		return (200, self.owner.db.TopVoted(limit))
+
+class ModeAlbumSearch(Mode):
+	def get(self, args):
+		if "album" not in args:
+			return (400, {"api_error": "album_search requires an 'album' argument."})
+		return (200, self.owner.db.AlbumSearch(args["album"]))
+
+class ModeVote(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to vote for songs."})
+		if "song_id" not in args:
+			return (400, {"api_error": "vote requires a 'song_id' argument."})
+		priorityNumber = self.owner.db.NextVote(self.session.user(), self.session._player)
+		# XXX: We don't check max-votes
+		if ";" in args["song_id"]:
+			for i in args["song_id"].split(";"):
+				self.owner.db.AddVote(self.session.user(), self.session._player, i, priorityNumber)
+		else:
+			self.owner.db.AddVote(self.session.user(), self.session._player, args['song_id'], priorityNumber)
 		return ModeStatus.get(self, args)
 
 class AcousticsSession(object):
@@ -159,6 +209,7 @@ class AcousticsServer(object):
 		self.db = db.Sqlite('/home/klange/Music/amp.sqlite')
 		self.sessions = {}
 	def getQueue(self, player):
+		# TODO: Actual queuing
 		raw = self.db.SongsByVotes(player)
 		outlist = []
 		output  = {}
@@ -177,6 +228,7 @@ class AcousticsServer(object):
 	def addMode(self, name, mode_type):
 		self.modes[name] = mode_type
 	def getPlayers(self):
+		# TODO: Read from configuration file [python?]
 		return ["default", "extra"]
 	def newSession(self):
 		sid = str(uuid.uuid1())
@@ -199,6 +251,10 @@ server.addMode("recent", ModeRecent)
 server.addMode("change_player", ModeChangePlayer)
 server.addMode("get_details", ModeDetails)
 server.addMode("art", ModeArt)
+server.addMode("top_voted", ModeTopVoted)
+server.addMode("album_search", ModeAlbumSearch)
+server.addMode("select", ModeSelect)
+server.addMode("vote", ModeVote)
 
 class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 	def do_GET(self):
@@ -247,6 +303,9 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 				ctype = 'application/json'
 			elif len(result) == 3:
 				(status, output, ctype) = result
+			else:
+				output = "?"
+				status = 400
 			# Respond appropriately
 			self.send_response(status)
 			self.send_header('Content-type', ctype)

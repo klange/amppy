@@ -3,6 +3,9 @@
 
 import socket
 
+class PlayerBackend(object):
+	pass
+
 class Messages():
 	Messages.CONNECT = "CONN"
 	Messages.QUIT    = "DISC"
