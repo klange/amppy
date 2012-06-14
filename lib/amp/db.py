@@ -155,7 +155,38 @@ class DatabaseManager(object):
 		if len(x):
 			return x[0]
 		else:
-			return {}
+			return None
+	def NextPlaylistSong(self, playlist_id):
+		c = self.conn.cursor()
+		c.execute("SELECT max(priority) FROM playlist_contents WHERE playlist_id = ?", [playlist_id])
+		v = c.fetchall()
+		if len(v) and not v[0]["max(priority)"] is None:
+			return v[0]["max(priority)"] + 1
+		else:
+			return 0
+	def AddToPlaylist(self, playlist_id, song_id):
+		priority = self.NextPlaylistSong(playlist_id)
+		c = self.conn.cursor()
+		c.execute("INSERT INTO playlist_contents (playlist_id, song_id, priority) VALUES (?, ?, ?)", [playlist_id, song_id, priority])
+		self.conn.commit()
+	def RemoveFromPlaylist(self, playlist_id, song_id):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM playlist_contents WHERE playlist_id = ? AND song_id = ?", [playlist_id, song_id])
+		self.conn.commit()
+	def CreatePlaylist(self, user, title):
+		c = self.conn.cursor()
+		c.execute("INSERT INTO playlists (who, title) VALUES (?, ?)", [user, title])
+		self.conn.commit()
+	def DeletePlaylist(self, playlist_id):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM playlists WHERE playlist_id = ?", [playlist_id])
+		c.execute("DELETE FROM playlist_contents WHERE playlist_id = ?", [playlist_id])
+		self.conn.commit()
+	def Purge(self, user, player_id):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM votes WHERE player_id = ? AND who = ?", [player_id, user])
+		self.conn.commit()
+
 
 
 class Sqlite(DatabaseManager):

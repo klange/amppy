@@ -27,8 +27,8 @@ class ModeStatus(Mode):
 		output["now_playing"] = self.session.currentSong()
 		output["playlist"] = self.owner.getQueue(self.session._player)
 		output["who"] = self.session.user()
-		output["can_skip"] = True
-		output["is_admin"] = True
+		output["can_skip"] = self.session.can_skip()
+		output["is_admin"] = self.session.is_admin()
 		return (200, output)
 
 class ModeGlobalStatus(Mode):
@@ -183,9 +183,9 @@ class ModeUnvote(Mode):
 			return (400, {"api_error": "vote requires a 'song_id' argument."})
 		if ";" in args["song_id"]:
 			for i in args["song_id"].split(";"):
-				self.owner.db.Unvote(self.session.user(), self.session._player, i)
+				self.owner.db.Unvote(self.session.user(), i)
 		else:
-			self.owner.db.Unvote(self.session.user(), self.session._player, args['song_id'])
+			self.owner.db.Unvote(self.session.user(), args['song_id'])
 		return ModeStatus.get(self, args)
 
 class ModePlaylists(Mode):
@@ -214,6 +214,75 @@ class ModePlaylistInfo(Mode):
 			return (400, {"api_error": "playlist_info requires a 'playlist_id' argument."})
 		return (200, self.owner.db.PlaylistInfo(args["playlist_id"]))
 
+class ModeAddToPlaylist(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to modify playlists."})
+		if "song_id" not in args:
+			return (400, {"api_error": "add_to_playlist requires a 'song_id' argument."})
+		if not "playlist_id" in args:
+			return (400, {"api_error", "add_to_playlist requires a 'playlist_id' argument."})
+		(discard, playlist) = ModePlaylistInfo.get(self, args)
+		if playlist['who'] != self.session.user() and not self.session.is_admin():
+			return (500, {"auth_error", "You are not permitted to modify this playlist."})
+		if ";" in args["song_id"]:
+			for i in args["song_id"].split(";"):
+				self.owner.db.AddToPlaylist(args["playlist_id"], i)
+		else:
+			self.owner.db.AddToPlaylist(args["playlist_id"], args['song_id'])
+		return ModePlaylistContents.get(self, args)
+
+class ModeRemoveFromPlaylist(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to modify playlists."})
+		if "song_id" not in args:
+			return (400, {"api_error": "remove_from_playlist requires a 'song_id' argument."})
+		if not "playlist_id" in args:
+			return (400, {"api_error", "remove_from_playlist requires a 'playlist_id' argument."})
+		(discard, playlist) = ModePlaylistInfo.get(self, args)
+		if playlist['who'] != self.session.user() and not self.session.is_admin():
+			return (500, {"auth_error", "You are not permitted to modify this playlist."})
+		if ";" in args["song_id"]:
+			for i in args["song_id"].split(";"):
+				self.owner.db.RemoveFromPlaylist(args["playlist_id"], i)
+		else:
+			self.owner.db.RemoveFromPlaylist(args["playlist_id"], args['song_id'])
+		return ModePlaylistContents.get(self, args)
+
+class ModeCreatePlaylist(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to modify playlists."})
+		if not "title" in args:
+			return (400, {"api_error", "create_playlist requires a 'title' argument."})
+		self.owner.db.CreatePlaylist(self.session.user(), args["title"])
+		args["who"] = self.session.user()
+		return ModePlaylists.get(self, args)
+
+class ModeDeletePlaylist(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to modify playlists."})
+		if not "playlist_id" in args:
+			return (400, {"api_error", "delete_playlist requires a 'playlist_id' argument."})
+		(discard, playlist) = ModePlaylistInfo.get(self, args)
+		if playlist['who'] != self.session.user() and not self.session.is_admin():
+			return (500, {"auth_error", "You are not permitted to modify this playlist."})
+		self.owner.db.DeletePlaylist(args["playlist_id"])
+		args["who"] = self.session.user()
+		return ModePlaylists.get(self, args)
+
+class ModePurge(Mode):
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "This action can only be executed by logged-in uesrs."})
+		if not "who" in args or not self.session.is_admin():
+			args["who"] = self.session.user()
+		self.owner.db.Purge(args["who"], self.session._player)
+		return ModeStatus.get(self, args)
+
+
 class ModeStats(Mode):
 	def get(self, args):
 		who = None
@@ -230,6 +299,11 @@ class AcousticsSession(object):
 		self._user   = None
 		self._player = self.owner.getPlayers()[0]
 		self.created = int(time.time())
+	def is_admin(self):
+		return True
+	def can_skip(self):
+		# Should be current_song->who = me || current_song->who = None
+		return True
 	def user(self):
 		return self._user
 	def player(self):
@@ -307,6 +381,11 @@ server.addMode("playlists", ModePlaylists)
 server.addMode("playlists_loose", ModePlaylistsLoose)
 server.addMode("playlist_contents", ModePlaylistContents)
 server.addMode("playlist_info", ModePlaylistInfo)
+server.addMode("add_to_playlist", ModeAddToPlaylist)
+server.addMode("remove_from_playlist", ModeRemoveFromPlaylist)
+server.addMode("create_playlist", ModeCreatePlaylist)
+server.addMode("delete_playlist", ModeDeletePlaylist)
+server.addMode("purge", ModePurge)
 
 failures = {}
 
