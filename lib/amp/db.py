@@ -209,6 +209,34 @@ class DatabaseManager(object):
 		a.append(player_id)
 		c.execute("UPDATE players SET %s WHERE player_id = ?" % s, a)
 		self.conn.commit()
+	def UpdateSong(self, song_id, args):
+		c = self.conn.cursor()
+		valid = ["path", "artist", "albumartist", "album", "title", "disc", "length", "track"]
+		a = []
+		s = []
+		for k,v in args.items():
+			if k in valid:
+				s.append("%s = ? " % k)
+				a.append(v)
+		s = ", ".join(s)
+		a.append(song_id)
+		c.execute("UPDATE songs SET %s WHERE song_id = ?" % s, a)
+		self.conn.commit()
+	def AddSong(self, args):
+		c = self.conn.cursor()
+		valid = ["path", "artist", "albumartist", "album", "title", "disc", "length", "track"]
+		keys   = []
+		qms    = []
+		values = []
+		for k,v in args.items():
+			if k in valid:
+				keys.append(k)
+				qms.append("?")
+				values.append(v)
+		keys = ", ".join(keys)
+		qms  = ", ".join(qms)
+		c.execute("INSERT INTO songs (%s) VALUES (%s)" % (keys, qms), values)
+		self.conn.commit()
 	def NextSong(self, player_id):
 		x = self.PlayerQueue(player_id)
 		if x:
