@@ -5,6 +5,7 @@ var acoustics_version = "1.99-beta";
 var jsonSource = 'json.pl';
 var artSource = 'json.pl?mode=art';
 var _logged_in_as = "logged in as";
+var _login = '<a href="javascript:login()">login</a>';
 var themes = ["dark","light","none"];
 
 /* Global State Variables */
@@ -1072,6 +1073,10 @@ function handlePlayerStateRequest(json) {
 		is_admin = json.is_admin;
 		$("#song-details-vote").show();
 	} else {
+		currentUser = ''
+		$("#header-bar-user-message").html(_login);
+		$("#user-name").html('');
+		is_admin = false;
 		$("#header-bar-menu-playlists").hide();
 		$("#song-details-vote").hide();
 	}
