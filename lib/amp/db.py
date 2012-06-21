@@ -100,7 +100,7 @@ class DatabaseManager(object):
 				args = {field: value}
 			else:
 				return []
-		return self.SELECT("songs", args, where=where, comparator=comparator)
+		return self.SELECT("songs", args, where=where, comparator=comparator, order=["album", "track"])
 	def NextVote(self, user, player):
 		c = self.conn.cursor()
 		c.execute("SELECT max(priority) FROM votes WHERE who = ? AND player_id = ?", [user, player])
