@@ -94,6 +94,10 @@ class PlayerImpl(PlayerBackend):
 		self.send_signal(signal.SIGUSR2)
 	def volume(self, val):
 		print("Setting volume to %d" % int(val))
+		if int(val) < 0:
+			val = 0
+		elif int(val) > 100:
+			val = 100
 		self.db.UpdatePlayer(self.player_id, {'volume': int(val)})
 		self.send_signal(signal.SIGUSR1)
 	def send_signal(self, sig):
