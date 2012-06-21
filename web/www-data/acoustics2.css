@@ -448,6 +448,7 @@ a img {
 				overflow: hidden;
 				font-family: sans-serif;
 				font-size: 14px;
+				line-height: 14px;
 			}
 				#now-playing-info div {
 					white-space: nowrap;
@@ -461,10 +462,12 @@ a img {
 				#now-playing-title {
 					font-weight: bold;
 					font-size: 16px;
+					line-height: 16px;
 					text-shadow: 0px 1px 1px #ccc;
 				}
 				#now-playing-album {
 					font-size: 13px;
+					line-height: 13px;
 				}
 				#now-playing-times {
 					font-style: oblique;
