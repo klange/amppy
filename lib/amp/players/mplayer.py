@@ -8,13 +8,12 @@ _thisPlayer = None
 def _skip(signum, frame):
 	self = _thisPlayer
 	self.stopped = 0
-	self.skipped = 1
 	self.tell("quit\n")
+	print("Skipping song...")
 
 def _stop(signum, frame):
 	self = _thisPlayer
 	self.stopped = 1
-	self.skipped = 0
 	self.tell("quit\n")
 	self.db.DeletePlayer(self.player_id)
 
@@ -63,7 +62,6 @@ class PlayerImpl(PlayerBackend):
 		global _thisPlayer
 		_thisPlayer = self
 		self.stopped = 0
-		self.skipped = 0
 		# XXX: Need to actually get the next song CORRECTLY!
 		song = self.db.NextSong(self.player_id)
 		self.db.UpdatePlayer(self.player_id, {
@@ -79,11 +77,11 @@ class PlayerImpl(PlayerBackend):
 		signal.signal(signal.SIGUSR2, _pause)
 		print("Waiting for player to finish...")
 		self.mplayer.wait()
-		if not self.stopped:
-			self.db.DeleteVotes(self.song_id, self.player_id)
-		if not self.skipped:
+		print("Player has finished.")
+		if self.stopped:
 			self.db.DeletePlayer(self.player_id)
 			sys.exit(0)
+		self.db.DeleteVotes(self.song_id, self.player_id)
 
 	def tell(self, string):
 		self.mplayer.stdin.write(string.encode("utf-8"))
