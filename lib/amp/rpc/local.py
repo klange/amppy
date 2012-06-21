@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
+import os, subprocess
+import amp.players.mplayer
+
 class RPC(object):
-	def start(self):
-		pass
-	def skip(self):
-		pass
-	def stop(self):
-		pass
-	def pause(self):
-		pass
-	def volume(self):
-		pass
-	def zap(self):
-		pass
+	def execute(self, player_id, args):
+		args.insert(0, player_id)
+		if os.getcwd().endswith("/web"):
+			args.insert(0, "../acoustics-player.py")
+		else:
+			args.isnert(0, "./acoustics-player.py")
+		subprocess.call(args)

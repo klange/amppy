@@ -125,6 +125,10 @@ class DatabaseManager(object):
 		c = self.conn.cursor()
 		c.execute("DELETE FROM votes WHERE song_id = ? AND who = ?", [song, user])
 		self.conn.commit()
+	def DeleteVotes(self, song, player):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM votes WHERE player_id = ? AND song_id = ?", [player, song])
+		self.conn.commit()
 	def SongCount(self):
 		c = self.conn.cursor()
 		c.execute("SELECT count(*) FROM SONGS",[])
@@ -186,8 +190,48 @@ class DatabaseManager(object):
 		c = self.conn.cursor()
 		c.execute("DELETE FROM votes WHERE player_id = ? AND who = ?", [player_id, user])
 		self.conn.commit()
-
-
+	def DeletePlayer(self, player_id):
+		c = self.conn.cursor()
+		c.execute("DELETE FROM players WHERE player_id = ?", [player_id])
+		self.conn.commit()
+	def CreatePlayer(self, player_id, local_id, volume):
+		c = self.conn.cursor()
+		c.execute("INSERT INTO players (player_id, local_id, volume) VALUES (?, ?, ?)", [player_id, local_id, volume])
+		self.conn.commit()
+	def UpdatePlayer(self, player_id, args):
+		c = self.conn.cursor()
+		a = []
+		s = []
+		for k,v in args.items():
+			s.append("%s = ? " % k)
+			a.append(v)
+		s = ", ".join(s)
+		a.append(player_id)
+		c.execute("UPDATE players SET %s WHERE player_id = ?" % s, a)
+		self.conn.commit()
+	def NextSong(self, player_id):
+		x = self.PlayerQueue(player_id)
+		if x:
+			return x[0]
+		else:
+			return self.Random(limit=1)[0]
+	def PlayerQueue(self, player):
+		# TODO: Actual queuing
+		raw = self.SongsByVotes(player)
+		outlist = []
+		output  = {}
+		x = self.SELECT("players", {"player_id": player})
+		for i in raw:
+			if x and x[0]['song_id'] == i['song_id']: continue
+			if i["song_id"] in output:
+				output[i["song_id"]]["priority"][i["who"]] = i["priority"]
+				output[i["song_id"]]["who"].append(i["who"])
+			else:
+				i["priority"] = {i["who"]: i["priority"]}
+				i["who"] = [i["who"]]
+				output[i["song_id"]] = i
+				outlist.append(i)
+		return outlist
 
 class Sqlite(DatabaseManager):
 	def __init__(self, location="conf/acoustics.sqlite"):

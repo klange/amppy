@@ -7,6 +7,8 @@ from urllib.parse import urlparse, parse_qs
 
 sys.path.append('lib')
 from amp import db
+import amp.players
+import amp.rpc.local
 
 PORT = 6969
 
@@ -25,7 +27,7 @@ class ModeStatus(Mode):
 		output["players"] = self.owner.getPlayers()
 		output["player"] = self.session.player()
 		output["now_playing"] = self.session.currentSong()
-		output["playlist"] = self.owner.getQueue(self.session._player)
+		output["playlist"] = self.owner.db.PlayerQueue(self.session._player)
 		output["who"] = self.session.user()
 		output["can_skip"] = self.session.can_skip()
 		output["is_admin"] = self.session.is_admin()
@@ -36,10 +38,14 @@ class ModeGlobalStatus(Mode):
 		output = {}
 		output["who"] = self.session.user()
 		output["player_names"] = self.owner.getPlayers()
-		output["players"] = []
+		output["players"] = {}
 		for i in output['player_names']:
 			x = self.owner.db.SELECT("players", {"player_id": i})
-			if x: output["players"].append(x)
+			if x:
+				pl = {}
+				pl["info"] = x[0]
+				pl["song"] = self.owner.db.SELECT("songs", {"song_id": x[0]["song_id"]})[0]
+				output["players"][i] = pl
 		return (200, output)
 
 class ModeSearch(Mode):
@@ -292,6 +298,14 @@ class ModeStats(Mode):
 		output["top_artists"] = self.owner.db.TopArtists(who)
 		return (200, output)
 
+class ModeControls(Mode):
+	def get(self, args):
+		_args = [args["mode"]]
+		if "value" in args:
+			_args.append(args["value"])
+		self.owner.rpc(self.session._player, _args)
+		return ModeStatus.get(self, [])
+
 class AcousticsSession(object):
 	def __init__(self, sessid, owner):
 		self.owner   = owner
@@ -328,23 +342,10 @@ class AcousticsServer(object):
 		self.modes = {}
 		self.db = db.Sqlite('/home/klange/Music/amp.sqlite')
 		self.sessions = {}
-	def getQueue(self, player):
-		# TODO: Actual queuing
-		raw = self.db.SongsByVotes(player)
-		outlist = []
-		output  = {}
-		x = self.db.SELECT("players", {"player_id": player})
-		for i in raw:
-			if x and x[0]['song_id'] == i['song_id']: continue
-			if i["song_id"] in output:
-				output[i["song_id"]]["priority"][i["who"]] = i["priority"]
-				output[i["song_id"]]["who"].append(i["who"])
-			else:
-				i["priority"] = {i["who"]: i["priority"]}
-				i["who"] = [i["who"]]
-				output[i["song_id"]] = i
-				outlist.append(i)
-		return outlist
+		self.players = {}
+		# XXX Run this through configuration
+		self.players["default"] = amp.rpc.local.RPC()
+		self.players["extra"] = amp.rpc.local.RPC()
 	def addMode(self, name, mode_type):
 		self.modes[name] = mode_type
 	def getPlayers(self):
@@ -354,6 +355,8 @@ class AcousticsServer(object):
 		sid = str(uuid.uuid1())
 		self.sessions[sid] = AcousticsSession(sid, self)
 		return sid
+	def rpc(self, player_id, args):
+		self.players[player_id].execute(player_id, args)
 	def execute(self, session, args):
 		if args["mode"] in self.modes:
 			return self.modes[args["mode"]](server, self.sessions[session]).get(args)
@@ -386,6 +389,14 @@ server.addMode("remove_from_playlist", ModeRemoveFromPlaylist)
 server.addMode("create_playlist", ModeCreatePlaylist)
 server.addMode("delete_playlist", ModeDeletePlaylist)
 server.addMode("purge", ModePurge)
+
+# Commands
+server.addMode("start",  ModeControls)
+server.addMode("stop",   ModeControls)
+server.addMode("skip",   ModeControls)
+server.addMode("pause",  ModeControls)
+server.addMode("volume", ModeControls)
+server.addMode("zap",    ModeControls)
 
 failures = {}
 
