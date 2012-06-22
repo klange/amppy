@@ -6,8 +6,7 @@ import os, json, sys, time, uuid, tempfile, importlib
 from urllib.parse import urlparse, parse_qs
 
 sys.path.append('lib')
-from amp import db
-import amp.config
+from amp import db, config
 import amp.players
 import amp.rpc.local
 
@@ -343,30 +342,26 @@ class AcousticsSession(object):
 		return obj
 
 class AcousticsServer(object):
-	def __init__(self, config_file='conf/acoustics.ini'):
+	def __init__(self):
 		self.modes = {}
-		config_string = open(config_file, 'r').read()
-		self.config = amp.config.AcousticsConfig(config_string)
-		self.db = db.Sqlite(self.config.database_uri)
+		self.config = config.AcousticsConfig()
+		self.db = db.Sqlite(self.config["database"]["data_source"].split(":")[-1])
 		self.sessions = {}
-		self.players = {}
+		self.players = self.config["{}"]['players'].split(",")
 	def addMode(self, name, mode_type):
 		self.modes[name] = mode_type
 	def getPlayers(self):
-		return list(self.config.players.keys())
+		return self.players
 	def newSession(self):
 		sid = str(uuid.uuid1())
 		self.sessions[sid] = AcousticsSession(sid, self)
 		return sid
 	def rpc(self, player_id, args):
 		if player_id in self.players:
-			player = self.players[player_id]
-		else:
-			player_configuration = self.config.players[player_id]
-			player_module_name = player_configuration.module_name
-			player_module = importlib.import_module(player_module_name)
-			player = self.players[player_id] = player_module.RPC()
-		player.execute(player_id, args)
+			rpc_module = importlib.import_module(self.config.translate(self.config['player.'+player_id]["rpc"]))
+			print(rpc_module)
+			player = rpc_module.RPC()
+			player.execute(player_id, args)
 	def execute(self, session, args):
 		if args["mode"] in self.modes:
 			return self.modes[args["mode"]](server, self.sessions[session]).get(args)
