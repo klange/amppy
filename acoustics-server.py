@@ -491,24 +491,28 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 		if "sessid" in self.cookie and self.cookie['sessid'].value in self.acoustics_server.sessions:
 			session = self.cookie["sessid"].value
 		else:
+			if "sessid" in self.cookie:
+				print("Bad session from previous instance?", self.cookie["sessid"].value)
 			if self.client_address[0] not in self.failures.keys():
 				print("First time, trying to give out session key for " + self.client_address[0])
 				self.failures[self.client_address[0]] = 0
 			self.failures[self.client_address[0]] += 1
 			session = self.acoustics_server.newSession(self.client_address)
 			self.cookie["sessid"] = session
+			print("serving fresh session", session)
 			if self.failures[self.client_address[0]] > 5:
-				self.failures[self.client_address[0]] -= 1
+				print("Failed too many times, going to have to duck out.")
+				self.failures[self.client_address[0]] -= 5
 				self.send_response(400)
 				self.send_header('Content-type', 'text/html')
-				self.send_header('Set-Cookie', self.cookie.output(header=""))
+				self.send_header('Set-Cookie', self.cookie.output(header="").strip())
 				self.end_headers()
 				self.wfile.write(b"Your browser is not accepting a required session cookie, please try refreshing.")
 				return
 			else:
 				self.send_response(307)
 				self.send_header('Location', self.path)
-				self.send_header('Set-Cookie', self.cookie.output(header=""))
+				self.send_header('Set-Cookie', self.cookie['sessid'].output(header="").strip())
 				self.end_headers()
 				return
 		if self.path.startswith("/www-data/auth"):
