@@ -310,33 +310,18 @@ class ModeControls(Mode):
 		self.owner.rpc(self.session._player, _args)
 		return ModeStatus.get(self, [])
 
-class ModeSessions(Mode):
-	def get(self, args):
-		if not self.session.is_admin():
-			return (500, {"auth_error": "You are not permitted to view this information."})
-		sessions = {}
-		for k,v in self.owner.sessions.items():
-			sessions[k] = {}
-			sessions[k]['is_admin'] = v.is_admin()
-			sessions[k]['user'] = v.user()
-			sessions[k]['player'] = v._player
-			sessions[k]['created'] = v.created
-			sessions[k]['address'] = v.remote
-		return (200, sessions)
-
-
 class AcousticsSession(object):
-	def __init__(self, sessid, owner, remote_host):
+	def __init__(self, sessid, owner):
 		self.owner   = owner
 		self.sessid  = sessid
 		self._user   = None
 		self._player = self.owner.getPlayers()[0]
 		self.created = int(time.time())
-		self.remote  = remote_host
 	def is_admin(self):
-		return not (self._user is None)
+		return True
 	def can_skip(self):
-		return not (self._user is None)
+		# Should be current_song->who = me || current_song->who = None
+		return True
 	def user(self):
 		return self._user
 	def player(self):
@@ -367,9 +352,9 @@ class AcousticsServer(object):
 		self.modes[name] = mode_type
 	def getPlayers(self):
 		return self.players
-	def newSession(self, client_address):
+	def newSession(self):
 		sid = str(uuid.uuid1())
-		self.sessions[sid] = AcousticsSession(sid, self, client_address)
+		self.sessions[sid] = AcousticsSession(sid, self)
 		return sid
 	def rpc(self, player_id, args):
 		if player_id in self.players:
@@ -409,7 +394,6 @@ server.addMode("remove_from_playlist", ModeRemoveFromPlaylist)
 server.addMode("create_playlist", ModeCreatePlaylist)
 server.addMode("delete_playlist", ModeDeletePlaylist)
 server.addMode("purge", ModePurge)
-server.addMode("sessions", ModeSessions)
 
 # Commands
 server.addMode("start",  ModeControls)
@@ -436,7 +420,7 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 				print("First time, trying to give out session key for " + self.client_address[0])
 				failures[self.client_address[0]] = 0
 			failures[self.client_address[0]] += 1
-			session = server.newSession(self.client_address)
+			session = server.newSession()
 			self.cookie["sessid"] = session
 			if failures[self.client_address[0]] > 3:
 				self.send_response(400)
