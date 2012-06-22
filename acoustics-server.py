@@ -500,14 +500,14 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 			if self.failures[self.client_address[0]] > 3:
 				self.send_response(400)
 				self.send_header('Content-type', 'text/html')
-				self.send_header('Set-Cookie', self.cookie)
+				self.send_header('Set-Cookie', self.cookie.output())
 				self.end_headers()
 				self.wfile.write(b"Your browser is not accepting a required session cookie, please try refreshing.")
 				return
 			else:
 				self.send_response(307)
 				self.send_header('Location', self.path)
-				self.send_header('Set-Cookie', self.cookie)
+				self.send_header('Set-Cookie', self.cookie.output())
 				self.end_headers()
 				return
 		if self.path.startswith("/www-data/auth"):
@@ -548,7 +548,11 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 			self.end_headers()
 			self.wfile.write(output)
 		else:
-			self.path = "/web%s" % self.path
+			self.path = os.path.join("web", self.path.replace("/","",1))
+			if not os.path.realpath(self.path).startswith(os.path.realpath("web")):
+				self.send_response(400)
+				self.end_headers()
+				return
 			return http.server.SimpleHTTPRequestHandler.do_GET(self)
 
 class AcousticsSocket(socketserver.TCPServer):
