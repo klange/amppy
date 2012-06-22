@@ -243,6 +243,9 @@ class DatabaseManager(object):
 		keys   = []
 		qms    = []
 		values = []
+		keys.append("online")
+		qms.append("?")
+		values.append(1)
 		for k,v in args.items():
 			if k in valid:
 				keys.append(k)
