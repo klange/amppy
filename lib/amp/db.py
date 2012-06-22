@@ -332,14 +332,11 @@ class DatabaseManager(object):
 
 		final_output = []
 		for i in playlist:
-			if i["song_id"] in output:
-				output[i["song_id"]]["priority"][i["who"]] = i["priority"]
-				output[i["song_id"]]["who"].append(i["who"])
-			else:
-				i["priority"] = {i["who"]: i["priority"]}
-				i["who"] = [i["who"]]
-				output[i["song_id"]] = i
-				final_output.append(i)
+			x = self.SELECT("votes", {"song_id": i["song_id"], "player_id": player})
+			i['who'] = []
+			for j in x:
+				i['who'].append(j['who'])
+			final_output.append(i)
 		return final_output
 	def UpdateVote(self, song_id, who, player, priority):
 		c = self.conn.cursor()
