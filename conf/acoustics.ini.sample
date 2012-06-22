@@ -1,45 +1,35 @@
-## Specify what players you want
-players=default
-webroot=/acoustics/
+players=default,extra
+#webroot=/amp/
+extensions=
+database_uri=/path/to/acoustics/conf/amp.sqlite
+#LastFM::Scrobbler
 [database]
-data_source=dbi:mysql:host=localhost;database=acoustics
-user=acoustics
-pass=
+data_source=/home/klange/Music/amp.sqlite
 
 [scanner]
-## you can restrict the scanner to a single part of your filesystem
-## leave blank if you don't care
-require_prefix=/path/to/my/music
+require_prefix=
 
-## Name each player [player.XXX], fill in from players list at the top
 [player.default]
 name=default
-module=Acoustics::Player::MPlayer
-extensions= # optional, specify player plugins
-## pick one:
-# rpc=Acoustics::RPC::SSH_PrivateKey
-# host=musicalbox
-# user=aparsons
-# private_key=conf/id_rsa
-# player_remote=/home/aparsons/projects/acoustics/bin/acoustics
-# rpc=Acoustics::RPC::Remctl
-# host=musicalbox
-## queue ("playlist") module to use (defaults to RoundRobin)
-queue=RoundRobin
-# queue=TimeSlice
-## Cap votes per voter (optional)
-# max_votes = 50
-## Start with a default volume (20 unless specified) (optional)
-#default_volume = 50
+module=amp.players.mplayer
+rpc=amp.rpc.local
+queue=TimeSlice
+default_volume = 70
+extensions=
+#LastFM::Scrobbler
+[player.extra]
+name=extra
+module=amp.player.mplayer
+#Acoustics::Player::MPlayer
+rpc=Acoustics::RPC::Local
+queue=TimeSlice
+default_volume=70
 
-[webauth]
-## pick one:
-# module=Acoustics::Web::Auth::Simple
-## pick something in %ENV
-# field=REMOTE_ADDR
-## or... field=random # random integer
-## or... field=time # the Unix timestamp
+#[lastfm]
+#apikey=46d779178cb5e43eefe754d0c1c1fecf
+#secret=cc0816175d6a2af11d876b91c2bc51e1
+#sk=c81f7a2c1ff5aa5005459310dc7060bb
 
-# module=Acoustics::Web::Auth::Kerberos
-# use_pts_for_admin=0 # only useful if you have AFS
-# pts_admin_group=proj.acoustics
+#[webauth]
+#module=Acoustics::Web::Auth::Simple
+#field=REMOTE_ADDR
