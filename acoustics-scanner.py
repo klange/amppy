@@ -8,6 +8,7 @@ import sys, os, subprocess
 
 sys.path.append(os.path.dirname(sys.argv[0]) + '/lib')
 from amp import db
+import amp.config
 
 tagreader = os.path.dirname(sys.argv[0]) + '/bin/tagreader'
 DB = None
@@ -34,7 +35,9 @@ def loadFile(song):
 		print("Added %s -> %s by %s" % (song['path'], song['title'], song['artist']))
 
 if __name__ == "__main__":
-	DB = db.Sqlite('/home/klange/Music/amp.sqlite')
+	config_string = open('conf/acoustics.ini', 'r').read()
+	config = amp.config.AcousticsConfig(config_string)
+	DB = db.Sqlite(config.database_uri)
 	rootdir = sys.argv[1]
 	for root, subFolders, files in os.walk(rootdir):
 		for file in files:

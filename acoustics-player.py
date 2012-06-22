@@ -8,7 +8,8 @@
 import sys, os
 
 sys.path.append(os.path.dirname(sys.argv[0]) + '/lib')
-from amp import db, players
+from amp import db
+import amp.config
 
 if __name__ == "__main__":
 	# Arguments are [player] [command] [arguments]
@@ -20,9 +21,9 @@ if __name__ == "__main__":
 	if len(sys.argv) < 3:
 		print("Expected command")
 		sys.exit(1)
-	# XXX: Do configuration reading and check what player we should
-	#      be using for this player_id and what database!
+	config_string = open('conf/acoustics.ini', 'r').read()
+	config = amp.config.AcousticsConfig(config_string)
 	from amp.players.mplayer import PlayerImpl
-	player = PlayerImpl(sys.argv[1], db.Sqlite('/home/klange/Music/amp.sqlite'))
+	player = PlayerImpl(sys.argv[1], db.Sqlite(config.database_uri))
 	# Execute the player command.
 	player.execute(sys.argv[2], sys.argv[3:])
