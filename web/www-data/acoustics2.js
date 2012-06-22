@@ -6,7 +6,7 @@ var jsonSource = 'json.pl';
 var artSource = 'json.pl?mode=art';
 var _logged_in_as = "logged in as";
 var _login = '<a href="javascript:login()">login</a>';
-var themes = ["dark","light","none"];
+var themes = ["dark","yelp","none"];
 
 /* Global State Variables */
 var currentUser = '';
@@ -69,6 +69,7 @@ function toggleTheme() {
 	if (theme == themes.length) {
 		theme = 0;
 	}
+	$("#theme-toggler").html(themes[theme]);
 	$("#theme").attr("href","www-data/" + themes[theme] + "-theme.css");
 }
 
