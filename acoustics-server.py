@@ -2,11 +2,12 @@
 
 import http.server, http.cookies
 import socketserver, base64, subprocess
-import os, json, sys, time, uuid, tempfile
+import os, json, sys, time, uuid, tempfile, importlib
 from urllib.parse import urlparse, parse_qs
 
 sys.path.append('lib')
 from amp import db
+import amp.config
 import amp.players
 import amp.rpc.local
 
@@ -146,9 +147,9 @@ class ModeSelect(Mode):
 class ModeChangePlayer(Mode):
 	def get(self, args):
 		if "player_id" not in args:
-			return (400, {"api_error", "Player change requires a player to change to."})
+			return (400, {"api_error": "Player change requires a player to change to."})
 		if args["player_id"] not in self.owner.getPlayers():
-			return (400, {"api_error", "Bad player id."})
+			return (400, {"api_error": "Bad player id."})
 		self.session._player = args["player_id"]
 		return ModeStatus.get(self, args)
 
@@ -342,25 +343,30 @@ class AcousticsSession(object):
 		return obj
 
 class AcousticsServer(object):
-	def __init__(self):
+	def __init__(self, config_file='conf/acoustics.ini'):
 		self.modes = {}
-		self.db = db.Sqlite('/home/klange/Music/amp.sqlite')
+		config_string = open(config_file, 'r').read()
+		self.config = amp.config.AcousticsConfig(config_string)
+		self.db = db.Sqlite(self.config.database_uri)
 		self.sessions = {}
 		self.players = {}
-		# XXX Run this through configuration
-		self.players["default"] = amp.rpc.local.RPC()
-		self.players["extra"] = amp.rpc.local.RPC()
 	def addMode(self, name, mode_type):
 		self.modes[name] = mode_type
 	def getPlayers(self):
-		# TODO: Read from configuration file [python?]
-		return ["default", "extra"]
+		return list(self.config.players.keys())
 	def newSession(self):
 		sid = str(uuid.uuid1())
 		self.sessions[sid] = AcousticsSession(sid, self)
 		return sid
 	def rpc(self, player_id, args):
-		self.players[player_id].execute(player_id, args)
+		if player_id in self.players:
+			player = self.players[player_id]
+		else:
+			player_configuration = self.config.players[player_id]
+			player_module_name = player_configuration.module_name
+			player_module = importlib.import_module(player_module_name)
+			player = self.players[player_id] = player_module.RPC()
+		player.execute(player_id, args)
 	def execute(self, session, args):
 		if args["mode"] in self.modes:
 			return self.modes[args["mode"]](server, self.sessions[session]).get(args)
