@@ -64,9 +64,10 @@ class PlayerImpl(PlayerBackend):
 		self.stopped = 0
 		# XXX: Need to actually get the next song CORRECTLY!
 		song = self.db.NextSong(self.player_id)
+		start_time = time.time()
 		self.db.UpdatePlayer(self.player_id, {
 			"song_id": song["song_id"],
-			"song_start": time.time()
+			"song_start": start_time
 			})
 		self.song_id = song["song_id"]
 		print("Playing %s from PID... %d" % (song['path'], os.getpid()))
@@ -81,6 +82,8 @@ class PlayerImpl(PlayerBackend):
 		if self.stopped:
 			self.db.DeletePlayer(self.player_id)
 			sys.exit(0)
+		for i in song['who']:
+			self.db.SetPlayed(self.song_id, self.player_id, i, start_time)
 		self.db.DeleteVotes(self.song_id, self.player_id)
 
 	def tell(self, string):

@@ -58,7 +58,7 @@ class DatabaseManager(object):
 			c.execute("SELECT time FROM history WHERE voter = ? GROUP BY time ORDER BY time DESC LIMIT ?", a)
 			results = c.fetchall()
 			a = (results[-1]["time"], player, voter, limit)
-			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON history.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? AND WHERE voter = ? ORDER BY history.time DESC LIMIT ?", a)
+			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON history.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? AND WHERE history.who = ? ORDER BY history.time DESC LIMIT ?", a)
 			results = c.fetchall()
 			return self.toDicts(results)
 		else:
@@ -67,8 +67,19 @@ class DatabaseManager(object):
 			results = c.fetchall()
 			a = (results[-1]["time"], player, limit)
 			c.execute("SELECT history.who, history.time, songs.* FROM history INNER JOIN songs ON history.song_id = songs.song_id WHERE history.time >= ? AND history.player_id = ? ORDER BY history.time DESC LIMIT ?", a)
-			results = c.fetchall()
-			return self.toDicts(results)
+			results = self.toDicts(c.fetchall())
+			output = {}
+			for i in results:
+				if i['time'] not in output:
+					i['who'] = [i['who']]
+					output[i['time']] = i
+				else:
+					output[i['time']]['who'].append(i['who'])
+			# Back to a list
+			results = []
+			for k,v in output.items():
+				results.append(v)
+			return results
 	def Recent(self, limit=20):
 		return self.SELECT("songs", {"online": 1}, order=["song_id"], direction="DESC", limit=limit)
 	def SongsByVotes(self, player=None):
@@ -128,6 +139,10 @@ class DatabaseManager(object):
 	def DeleteVotes(self, song, player):
 		c = self.conn.cursor()
 		c.execute("DELETE FROM votes WHERE player_id = ? AND song_id = ?", [player, song])
+		self.conn.commit()
+	def SetPlayed(self, song, player, who, time):
+		c = self.conn.cursor()
+		c.execute("INSERT INTO history (song_id, player_id, who, time) VALUES (?, ?, ?, ?)", [song, player, who, time])
 		self.conn.commit()
 	def SongCount(self):
 		c = self.conn.cursor()
@@ -266,6 +281,16 @@ class DatabaseManager(object):
 			if not i in debt:
 				debt[i] = 0
 
+		# Base debts off of recently played songs.
+		for i in self.History(player=player, limit=100):
+			cost =   ((float(i['length']) + 1.0) / (float(len(i['who'])) + 1.0)) * 0.02
+			payout = ((float(i['length']) + 0.1) / (float(len(who) - len(i['who'])) + 0.1)) * 0.02
+			for w in who:
+				if w in i['who']:
+					debt[w] += payout
+				else:
+					debt[w] -= payout
+
 		def getOrderedVotes(w):
 			out = []
 			x = 0
@@ -309,7 +334,7 @@ class DatabaseManager(object):
 						remaining_voters.remove(i['who'])
 					if i['who'] not in voters:
 						voters.append(i['who'])
-			payout = float(nextsong['length']) / float(len(remaining_voters))
+			payout = (float(nextsong['length']) + 1.0) / (float(len(remaining_voters)) + 1.0)
 			for i in remaining_voters:
 				debt[i] -= payout
 			for i in voters:
