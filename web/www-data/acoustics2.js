@@ -70,6 +70,7 @@ function toggleTheme() {
 		theme = 0;
 	}
 	$("#theme").attr("href","www-data/" + themes[theme] + "-theme.css");
+	$("#theme-toggler-name").stop(clearQueue=true,jumpToEnd=true);
 	$("#theme-toggler-name").hide().html(themes[theme]);
 	$("#theme-toggler-name").fadeIn(300).delay(800).fadeOut(300);
 	$.cookie("amp-theme", themes[theme]);
