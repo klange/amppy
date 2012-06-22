@@ -495,7 +495,7 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 				print("First time, trying to give out session key for " + self.client_address[0])
 				self.failures[self.client_address[0]] = 0
 			self.failures[self.client_address[0]] += 1
-			session = self.acoustics_server.newSession()
+			session = self.acoustics_server.newSession(self.client_address)
 			self.cookie["sessid"] = session
 			if self.failures[self.client_address[0]] > 3:
 				self.send_response(400)
