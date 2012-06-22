@@ -82,8 +82,9 @@ class PlayerImpl(PlayerBackend):
 		if self.stopped:
 			self.db.DeletePlayer(self.player_id)
 			sys.exit(0)
-		for i in song['who']:
-			self.db.SetPlayed(self.song_id, self.player_id, i, start_time)
+		if 'who' in song:
+			for i in song['who']:
+				self.db.SetPlayed(self.song_id, self.player_id, i, start_time)
 		self.db.DeleteVotes(self.song_id, self.player_id)
 
 	def tell(self, string):

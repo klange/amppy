@@ -281,16 +281,6 @@ class DatabaseManager(object):
 			if not i in debt:
 				debt[i] = 0
 
-		# Base debts off of recently played songs.
-		for i in self.History(player=player, limit=100):
-			cost =   ((float(i['length']) + 1.0) / (float(len(i['who'])) + 1.0)) * 0.02
-			payout = ((float(i['length']) + 0.1) / (float(len(who) - len(i['who'])) + 0.1)) * 0.02
-			for w in who:
-				if w in i['who']:
-					debt[w] += payout
-				else:
-					debt[w] -= payout
-
 		def getOrderedVotes(w):
 			out = []
 			x = 0
