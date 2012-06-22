@@ -399,21 +399,35 @@ class ModeControls(Mode):
 		self.owner.rpc(self.session._player, _args)
 		return ModeStatus.get(self, [])
 
+class ModeSessions(Mode):
+	name = "sessions"
+
+	def get(self, args):
+		if not self.session.is_admin():
+			return (500, {"auth_error": "You are not permitted to view this information."})
+		sessions = {}
+		for k,v in self.owner.sessions.items():
+			sessions[k] = {}
+			sessions[k]['is_admin'] = v.is_admin()
+			sessions[k]['user'] = v.user()
+			sessions[k]['player'] = v._player
+			sessions[k]['created'] = v.created
+			sessions[k]['address'] = v.remote
+		return (200, sessions)
+
+
 class AcousticsSession(object):
-	def __init__(self, sessid, owner):
+	def __init__(self, sessid, owner, remote_host):
 		self.owner   = owner
 		self.sessid  = sessid
 		self._user   = None
 		self._player = self.owner.players[0]
 		self.created = int(time.time())
-
+		self.remote  = remote_host
 	def is_admin(self):
-		return True
-
+		return not (self._user is None)
 	def can_skip(self):
-		# Should be current_song->who = me || current_song->who = None
-		return True
-
+		return not (self._user is None)
 	def user(self):
 		return self._user
 
@@ -443,10 +457,9 @@ class AcousticsServer(object):
 		self.db = db.Sqlite(self.config["database"]["data_source"].split(":")[-1])
 		self.sessions = {}
 		self.players = self.config["{}"]['players'].split(",")
-
-	def newSession(self):
+	def newSession(self, client_address):
 		sid = str(uuid.uuid1())
-		self.sessions[sid] = AcousticsSession(sid, self)
+		self.sessions[sid] = AcousticsSession(sid, self, client_address)
 		return sid
 
 	def rpc(self, player_id, args):
@@ -461,14 +474,12 @@ class AcousticsServer(object):
 		else:
 			return (400, {"api_error": "Unrecognized mode `%s`" % args["mode"]})
 
-
 def AcousticsHandlerFactory(server):
 	failures = {}
 	handler = AcousticsHandler
 	handler.acoustics_server = server
 	handler.failures = failures
 	return handler
-
 
 class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 	def do_GET(self):
