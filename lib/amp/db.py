@@ -364,3 +364,7 @@ class Sqlite(DatabaseManager):
 		c = self.conn.cursor()
 		c.execute("INSERT INTO votes (song_id, time, player_id, who, priority) VALUES (?, date('now'), ?, ?, ?)", [song, player, user, priority])
 		self.conn.commit()
+	def do(self, statement):
+		c = self.conn.cursor()
+		c.execute(statement)
+		self.conn.commit()

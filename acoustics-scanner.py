@@ -8,7 +8,8 @@ import sys, os, subprocess
 
 # XXX: Library paths
 sys.path.append(os.path.dirname(sys.argv[0]) + '/lib')
-from amp import db, config
+from amp import db
+import amp.config
 
 tagreader = os.path.dirname(sys.argv[0]) + '/bin/tagreader'
 DB = None
