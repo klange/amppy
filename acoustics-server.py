@@ -397,6 +397,7 @@ class ModeControls(Mode):
 		if args["mode"] == "skip" and not self.session.can_skip():
 				return (500, {"auth_error": "You can not skip this song."})
 		self.owner.rpc(self.session._player, _args)
+		time.sleep(1) # Give the players a bit of time to update the DB
 		return ModeStatus.get(self, [])
 
 class ModeSessions(Mode):
