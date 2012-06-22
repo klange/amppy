@@ -175,6 +175,23 @@ class ModeArt(Mode):
 		f.close()
 		return (200, filecontents, "image/png")
 
+class ModeReorderQueue(Mode):
+	name = "reorder_queue"
+
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to vote for songs."})
+		if "song_id" not in args:
+			return (400, {"api_error": "reorder_queue requires a 'song_id'"})
+		p = 0
+		for i in args["song_id"].split(";"):
+			self.owner.db.UpdateVote(i, self.session.user(), self.session._player, p)
+			p += 1
+
+		return ModeStatus.get(self, [])
+
+
+
 
 class ModeSelect(Mode):
 	name = "select"

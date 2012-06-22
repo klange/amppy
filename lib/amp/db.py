@@ -260,6 +260,10 @@ class DatabaseManager(object):
 				output[i["song_id"]] = i
 				outlist.append(i)
 		return outlist
+	def UpdateVote(self, song_id, who, player, priority):
+		c = self.conn.cursor()
+		c.execute("UPDATE votes SET priority = ? WHERE song_id = ? AND who = ? AND player_id = ?", [priority, song_id, who, player])
+		self.conn.commit()
 
 class Sqlite(DatabaseManager):
 	def __init__(self, location="conf/acoustics.sqlite"):
