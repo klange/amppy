@@ -9,5 +9,5 @@ class RPC(object):
 		if os.getcwd().endswith("/web"):
 			args.insert(0, "../acoustics-player.py")
 		else:
-			args.isnert(0, "./acoustics-player.py")
+			args.insert(0, "./acoustics-player.py")
 		subprocess.call(args)
