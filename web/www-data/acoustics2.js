@@ -69,8 +69,10 @@ function toggleTheme() {
 	if (theme == themes.length) {
 		theme = 0;
 	}
-	$("#theme-toggler").html(themes[theme]);
 	$("#theme").attr("href","www-data/" + themes[theme] + "-theme.css");
+	$("#theme-toggler-name").hide().html(themes[theme]);
+	$("#theme-toggler-name").fadeIn(300).delay(800).fadeOut(300);
+	$.cookie("amp-theme", themes[theme]);
 }
 
 function orientationAdjust() {
@@ -149,6 +151,18 @@ $(document).ready(function() {
 			$(this).animate({bottom: -50, opacity: 0.1}, 'fast');
 		}
 	});
+
+	if ($.cookie("amp-theme")) {
+		$("#theme").attr("href","www-data/" + $.cookie("amp-theme") + "-theme.css");
+		j = 0;
+		while (j < themes.length) {
+			if (themes[j] == $.cookie("amp-theme")) {
+				theme = j;
+				break;
+			}
+			j++;
+		}
+	}
 
 
 	$("#queue-list").sortable({
