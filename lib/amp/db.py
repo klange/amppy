@@ -251,6 +251,72 @@ class DatabaseManager(object):
 		x = self.SELECT("players", {"player_id": player})
 		for i in raw:
 			if x and x[0]['song_id'] == i['song_id']: continue
+			outlist.append(i)
+
+		votes = outlist[:]
+
+		debt = {}
+		who  = []
+
+		for i in outlist:
+			if not i['who'] in who:
+				who.append(i['who'])
+
+		for i in who:
+			if not i in debt:
+				debt[i] = 0
+
+		def getOrderedVotes(w):
+			out = []
+			x = 0
+			# Slow sort, because fuck it
+			for i in outlist:
+				if w == i["who"]:
+					out.append(i)
+			return sorted(out, key = lambda song: song["priority"])
+
+		def sorter(w):
+			if next_songs[w]:
+				return debt[w] * 10000 + next_songs[w][0]["length"]
+			else:
+				return 10000000000
+
+		def getBestChoices(next_songs):
+			return sorted(who, key=sorter)
+
+		def _remove(outlist, nextsong):
+			newoutlist = []
+			for i in outlist:
+				if i["song_id"] != nextsong['song_id']:
+					newoutlist.append(i)
+			return newoutlist
+
+		playlist = []
+
+		while outlist:
+			next_songs = {}
+			for w in who:
+				next_songs[w] = getOrderedVotes(w)
+			best_choices = getBestChoices(next_songs)
+			nextsong = next_songs[best_choices[0]][0]
+			outlist = _remove(outlist, nextsong)
+			playlist.append(nextsong)
+			remaining_voters = who[:]
+			voters = []
+			for i in votes:
+				if i['song_id'] == nextsong['song_id']:
+					if i['who'] in remaining_voters:
+						remaining_voters.remove(i['who'])
+					if i['who'] not in voters:
+						voters.append(i['who'])
+			payout = float(nextsong['length']) / float(len(remaining_voters))
+			for i in remaining_voters:
+				debt[i] -= payout
+			for i in voters:
+				debt[i] += payout
+
+		final_output = []
+		for i in playlist:
 			if i["song_id"] in output:
 				output[i["song_id"]]["priority"][i["who"]] = i["priority"]
 				output[i["song_id"]]["who"].append(i["who"])
@@ -258,8 +324,8 @@ class DatabaseManager(object):
 				i["priority"] = {i["who"]: i["priority"]}
 				i["who"] = [i["who"]]
 				output[i["song_id"]] = i
-				outlist.append(i)
-		return outlist
+				final_output.append(i)
+		return final_output
 	def UpdateVote(self, song_id, who, player, priority):
 		c = self.conn.cursor()
 		c.execute("UPDATE votes SET priority = ? WHERE song_id = ? AND who = ? AND player_id = ?", [priority, song_id, who, player])
