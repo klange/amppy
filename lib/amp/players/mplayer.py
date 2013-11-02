@@ -8,13 +8,13 @@ _thisPlayer = None
 def _skip(signum, frame):
 	self = _thisPlayer
 	self.stopped = 0
-	self.tell("quit\n")
+	self.tell("stop\n")
 	print("Skipping song...")
 
 def _stop(signum, frame):
 	self = _thisPlayer
 	self.stopped = 1
-	self.tell("quit\n")
+	self.tell("stop\n")
 	self.db.DeletePlayer(self.player_id)
 
 def _pause(signum, frame):
@@ -71,7 +71,7 @@ class PlayerImpl(PlayerBackend):
 			})
 		self.song_id = song["song_id"]
 		print("Playing %s from PID... %d" % (song['path'], os.getpid()))
-		self.mplayer = subprocess.Popen(['mplayer', '-slave', '-quiet', '-af', 'volnorm=2:0.10', '-volume', str(self.player['volume']), song['path']], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+		self.mplayer = subprocess.Popen(['mplayer', '-slave', '-quiet', '-volume', str(self.player['volume']), song['path']], stdin=subprocess.PIPE, stdout=None)
 		signal.signal(signal.SIGHUP, _skip)
 		signal.signal(signal.SIGINT, _stop)
 		signal.signal(signal.SIGUSR1, _volume)
@@ -89,6 +89,7 @@ class PlayerImpl(PlayerBackend):
 
 	def tell(self, string):
 		self.mplayer.stdin.write(string.encode("utf-8"))
+		self.mplayer.stdin.flush()
 
 	def skip(self):
 		self.send_signal(signal.SIGHUP)
