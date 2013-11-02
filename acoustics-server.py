@@ -500,6 +500,9 @@ def AcousticsHandlerFactory(server):
 	return handler
 
 class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
+	def address_string(self):
+		host, port = self.client_address[:2]
+		return '%s' % host
 	def do_GET(self):
 		if 'cookie' in self.headers:
 			self.cookie = http.cookies.SimpleCookie(self.headers["cookie"])
