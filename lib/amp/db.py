@@ -362,9 +362,15 @@ class Sqlite(DatabaseManager):
 		return self.SELECT("songs", {"online": 1}, order=["RANDOM()"], limit=limit)
 	def AddVote(self, user, player, song, priority):
 		c = self.conn.cursor()
-		c.execute("INSERT INTO votes (song_id, time, player_id, who, priority) VALUES (?, date('now'), ?, ?, ?)", [song, player, user, priority])
-		self.conn.commit()
+		try:
+			c.execute("INSERT INTO votes (song_id, time, player_id, who, priority) VALUES (?, date('now'), ?, ?, ?)", [song, player, user, priority])
+			self.conn.commit()
+		except sqlite3.OperationalError:
+			self.conn.rollback()
 	def do(self, statement):
 		c = self.conn.cursor()
-		c.execute(statement)
-		self.conn.commit()
+		try:
+			c.execute(statement)
+			self.conn.commit()
+		except sqlite3.OperationalError:
+			self.conn.rollback()
