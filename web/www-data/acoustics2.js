@@ -1352,6 +1352,9 @@ function songDetails(id) {
 			$("#song-details-file a").attr('title', json.path);
 			$("#song-details-file a").attr('href',
 				'#SelectRequest/path/' + uriencode(json.path));
+
+			$("#song-details-download a").attr('href', '/json.' + json.path.slice(json.path.lastIndexOf('.')+1) + '?mode=audio-data&song_id=' + id);
+
 			$("#song-details-album-art").empty();
 			if (is_admin) {
 				$("#song-details-edit-album-art").attr("href","javascript:fixArt(\"" + jsencode(json.artist) + "\",\"" + jsencode(json.album) + "\",\"" + jsencode(json.title) + "\")");

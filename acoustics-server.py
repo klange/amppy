@@ -417,6 +417,7 @@ class ModeControls(Mode):
 		time.sleep(1) # Give the players a bit of time to update the DB
 		return ModeStatus.get(self, [])
 
+
 class ModeSessions(Mode):
 	name = "sessions"
 
@@ -432,6 +433,24 @@ class ModeSessions(Mode):
 			sessions[k]['created'] = v.created
 			sessions[k]['address'] = v.remote
 		return (200, sessions)
+
+
+class ModeRawAudio(Mode):
+	name = "audio-data"
+
+	def get(self, args):
+		if not self.session.user():
+			return (500, {"auth_error": "You must login to perform this action."})
+		obj = self.owner.db.SELECT("songs", {"song_id": args['song_id']})[0]
+		if obj:
+			import mimetypes
+			with open(obj["path"],"rb") as f:
+				filecontents = f.read()
+			mimetypes.init()
+			mimetype = mimetypes.guess_type(obj["path"])[0]
+			return (200, filecontents, mimetype)
+		else:
+			return (404, {'error': "Not found."})
 
 
 class AcousticsSession(object):
