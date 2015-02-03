@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import http.server, http.cookies
-import socketserver, base64, subprocess
+import socketserver, base64, subprocess, socket
 import os, json, sys, time, uuid, tempfile, importlib
 from urllib.parse import urlparse, parse_qs
 
@@ -602,6 +602,10 @@ class AcousticsHandler(http.server.SimpleHTTPRequestHandler):
 
 class AcousticsSocket(socketserver.TCPServer):
 	allow_reuse_address = True
+	address_family = socket.AF_INET6
+	def server_bind(self):
+		self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, False)
+		socketserver.TCPServer.server_bind(self)
 
 if __name__ == "__main__":
 	server = AcousticsServer()
