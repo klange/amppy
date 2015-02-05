@@ -71,7 +71,7 @@ class PlayerImpl(PlayerBackend):
 			})
 		self.song_id = song["song_id"]
 		print("Playing %s from PID... %d" % (song['path'], os.getpid()))
-		self.mplayer = subprocess.Popen(['mplayer', '-slave', '-really-quiet', '-input', 'nodefault-bindings', '-noconfig', 'all', '-volume', str(self.player['volume']), song['path']], stdin=subprocess.PIPE, stdout=None)
+		self.mplayer = subprocess.Popen(['mplayer', '-vc', 'null', '-vo', 'null', '-novideo', '-slave', '-really-quiet', '-input', 'nodefault-bindings', '-noconfig', 'all', '-volume', str(self.player['volume']), song['path']], stdin=subprocess.PIPE, stdout=None)
 		signal.signal(signal.SIGHUP, _skip)
 		signal.signal(signal.SIGINT, _stop)
 		signal.signal(signal.SIGUSR1, _volume)
