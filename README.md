@@ -22,6 +22,7 @@ Acoustics Media Player (aka AMP) is a web-based music indexer and jukebox. AMP's
 - Support more authentication methods.
 - Add Python packaging metadata.
 - Implement remote playback methods.
+- Rewrite `build-tagreader.pl` in Python
 
 ## License
 
