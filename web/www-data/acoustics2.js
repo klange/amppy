@@ -1403,7 +1403,16 @@ $("#message-box").ready(function() {
 	$("#message-box").ajaxError(function (e, xhr, opts, err) {
 		/* If there's no message to show, let's not bother */
 		if (xhr.responseText.length > 10) {
-			showMessageImportant("Communication Error", xhr.responseText.replace(/<style.*<\/style>/g,""));
+			try {
+				var results = JSON.parse(xhr.responseText);
+				if (results && 'auth_error' in results) {
+					showMessageImportant("Authentication Error", results.auth_error);
+				} else if (results && 'api_error' in results) {
+					showMessageImportant("API Error", results.api_error);
+				}
+			} catch (err) {
+				showMessageImportant("Communication Error", xhr.responseText.replace(/<style.*<\/style>/g,""));
+			}
 		}
 	});
 });
