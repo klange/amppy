@@ -4,8 +4,11 @@ Acoustics Media Player (aka AMP) is a web-based music indexer and jukebox. AMP's
 
 ## Features
 - Multiple player support
+  - Acoustics is agnostic to backend players and can be adapted to any media player (core support is for mplayer)
 - Multiple room support
+  - Run one instance of Acoustics to track users, music, and voting, but have multiple players.
 - Multi-user voting with fair queue
+  - Users vote for music from the database, which influences ordering in the queue
 - Clean JSON API
 - Single-Page-Application client interface
   - Queue reordering
