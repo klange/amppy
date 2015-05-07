@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
-	This is the player application called by remctl or
-	through SSH; it is the replacement for the Perl command
-	'acoustics' and provides the same functionality.
+Run this once upon installation after writing your config file.
 """
 
 import sys
