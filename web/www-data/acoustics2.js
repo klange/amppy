@@ -5,7 +5,7 @@ var acoustics_version = "1.99-beta";
 var jsonSource = 'json.pl';
 var _logged_in_as = "logged in as";
 var _login = '<a href="javascript:login()">login</a>';
-var themes = ["dark","yelp","none"];
+var themes = ["dark","none"];
 
 /* Global State Variables */
 var currentUser = '';

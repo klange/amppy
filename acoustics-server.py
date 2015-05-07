@@ -163,7 +163,7 @@ class ModeArt(Mode):
 			size = 1000
 		obj = self.owner.db.SELECT("songs", {"song_id": args["song_id"]})[0]
 		possible = ["acoustics-art.png", "acoustics-art.jpg", "cover.png", "cover.jpg", "Folder.png", "Folder.jpg"]
-		path = "web/www-data/icons/cd_case.png"
+		path = "web/www-data/images/cd_case.png"
 		for i in possible:
 			fpath = os.path.join(os.path.dirname(obj["path"]),i)
 			if os.path.exists(fpath):
