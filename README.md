@@ -31,6 +31,11 @@ Acoustics Media Player (aka AMP) is a web-based music indexer and jukebox. AMP's
 
 Acoustics is released under the NCSA / University of Illinois license.
 
+## Screenshots
+
+![Screenshot](http://i.imgur.com/PJNwWEn.png)
+![Screenshot](http://i.imgur.com/PhYUUXd.png)
+
 ## Authors
 
 Acoustics was originally written by [Adrian Kreher](https://github.com/avuserow), with a handful of other contributors. The current interface and the Python rewrite were both written by [Kevin Lange](https://github.com/klange).
