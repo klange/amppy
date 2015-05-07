@@ -3,7 +3,6 @@
 /* Configuration data */
 var acoustics_version = "1.99-beta";
 var jsonSource = 'json.pl';
-var artSource = 'json.pl?mode=art';
 var _logged_in_as = "logged in as";
 var _login = '<a href="javascript:login()">login</a>';
 var themes = ["dark","yelp","none"];
@@ -1610,7 +1609,7 @@ function setMenuItem(item) {
 }
 
 function newArtUrl(song_id, size) {
-	return getPath("mode=art;song_id=" + song_id + ";size=" + size);
+	return getPath("mode=art;song_id=" + song_id + ";size=" + size*2);
 }
 
 function unfullscreen() {
