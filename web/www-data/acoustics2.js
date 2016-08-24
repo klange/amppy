@@ -654,7 +654,11 @@ function doSearch(field, value) {
 		function (data) {
 			$("#search-results-status").html("Processing " + data.length + " results.");
 			fillResultTable(data, 0);
-			$("#search-results-status").html("Search results for '" + value + "'.");
+			if (value == '') {
+				$("#search-results-status").html("All music.");
+			} else {
+				$("#search-results-status").html("Search results for '" + value + "'.");
+			}
 			$("#search-results-dim").hide();
 			if (data.length == search_first) {
 				$("#search-results-bottom").show();
@@ -677,7 +681,11 @@ function doSearchAppend() {
 		function (data) {
 			$("#search-results-status").html("Processing " + data.length + " results.");
 			results_time += appendSearchResults(data);
-			$("#search-results-status").html("Search results for '" + search_value + "'.");
+			if (search_value == '') {
+				$("#search-results-status").html("All music.");
+			} else {
+				$("#search-results-status").html("Search results for '" + search_value + "'.");
+			}
 			if (data.length) {
 				results_length += data.length;
 				updateResults();
@@ -1464,7 +1472,11 @@ function advancedSearchFormSubmit() {
 				}
 			}
 			fillResultTable(data);
-			$("#search-results-status").html("Search results for '" + value + "'.");
+			if (value == '') {
+				$("#search-results-status").html("All music.");
+			} else {
+				$("#search-results-status").html("Search results for '" + value + "'.");
+			}
 		}
 	);
 	return false;
